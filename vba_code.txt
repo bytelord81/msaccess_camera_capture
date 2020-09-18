@@ -1,0 +1,84 @@
+'tomasz.bialoblocki
+
+
+Option Compare Database
+Option Explicit
+
+
+Const WS_CHILD As Long = &H40000000
+Const WS_VISIBLE As Long = &H10000000
+
+
+Const WM_USER As Long = &H400
+Const WM_CAP_START As Long = WM_USER
+
+
+Const WM_CAP_DRIVER_CONNECT As Long = WM_CAP_START + 10
+Const WM_CAP_DRIVER_DISCONNECT As Long = WM_CAP_START + 11
+Const WM_CAP_FILE_SAVEDIB As Long = WM_CAP_START + 25
+Const WM_CAP_DLG_VIDEOFORMAT As Long = WM_CAP_START + 41
+Const WM_CAP_GET_VIDEOFORMAT = WM_CAP_START + 44
+Const WM_CAP_SET_VIDEOFORMAT = WM_CAP_START + 45
+Const WM_CAP_SET_PREVIEW As Long = WM_CAP_START + 50
+Const WM_CAP_SET_PREVIEWRATE As Long = WM_CAP_START + 52
+
+Private Declare PtrSafe Function capCreateCaptureWindow _
+    Lib "avicap32.dll" Alias "capCreateCaptureWindowA" _
+         (ByVal lpszWindowName As String, ByVal dwStyle As Long _
+        , ByVal X As Long, ByVal Y As Long, ByVal nWidth As Long _
+        , ByVal nHeight As Long, ByVal hwndParent As LongPtr _
+        , ByVal nID As Long) As Long
+
+
+Private Declare PtrSafe Function SendMessage Lib "user32" _
+    Alias "SendMessageA" (ByVal hWnd As LongPtr, ByVal wMsg As Long _
+        , ByVal wParam As Long, ByRef lParam As Any) As Long
+        
+
+Dim MyDocsPath As String
+Dim hCap As LongPtr
+
+'Save picture at local path
+Sub cmd4_Click()
+    Dim sFileName As String
+    Dim AO As Long
+    Dim Index As Integer
+    MyDocsPath = "C:\TEMP\"
+    Call SendMessage(hCap, WM_CAP_SET_PREVIEW, CLng(False), 0&)
+    sFileName = MyDocsPath & "\capture_camera" & Int(Time() * 1440 * Rnd + 1) & ".jpg"
+    Call SendMessage(hCap, WM_CAP_FILE_SAVEDIB, 0&, ByVal CStr(sFileName))
+DoFinally:
+    Call SendMessage(hCap, WM_CAP_SET_PREVIEW, CLng(True), 0&)
+End Sub
+
+'Stop camera
+Sub Cmd3_Click()
+    Dim temp As Long
+    temp = SendMessage(hCap, WM_CAP_DRIVER_DISCONNECT, 0&, 0&)
+End Sub
+
+'Start camera
+Sub Cmd1_Click()
+    hCap = capCreateCaptureWindow("Take a Camera Shot", WS_CHILD Or WS_VISIBLE, 1, 0, PicWebCam.Width, PicWebCam.Height, PicWebCam.Form.hWnd, 0)
+    If hCap <> 0 Then
+        Call SendMessage(hCap, WM_CAP_DRIVER_CONNECT, 0, 0)
+        Call SendMessage(hCap, WM_CAP_GET_VIDEOFORMAT, 0, 0)
+        Call SendMessage(hCap, WM_CAP_SET_VIDEOFORMAT, 1, 1)
+        Call SendMessage(hCap, WM_CAP_SET_PREVIEWRATE, 66, 0&)
+        Call SendMessage(hCap, WM_CAP_SET_PREVIEW, CLng(True), 0&)
+    End If
+End Sub
+
+'Format camera
+Sub Cmd2_Click()
+    Dim temp As Long
+    temp = SendMessage(hCap, WM_CAP_DLG_VIDEOFORMAT, 0&, 0&)
+End Sub
+
+'Main Form
+Sub Form_Load()
+    cmd1.Caption = "Start &Cam"
+    cmd2.Caption = "&Format Cam"
+    cmd3.Caption = "&Close Cam"
+    cmd4.Caption = "&Save Image"
+End Sub
